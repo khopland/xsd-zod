@@ -1,25 +1,27 @@
 {
-  "name": "tsdown-starter",
+  "name": "xsd-zod",
   "type": "module",
-  "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
-  "author": "Author Name <author.name@mail.com>",
+  "version": "0.1.0",
+  "description": "Generate Zod validators and TypeScript types from XSD schemas",
+  "author": "",
   "license": "MIT",
-  "homepage": "https://github.com/author/library#readme",
+  "homepage": "https://github.com/user/xsd-zod#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/author/library.git"
+    "url": "git+https://github.com/user/xsd-zod.git"
   },
   "bugs": {
-    "url": "https://github.com/author/library/issues"
+    "url": "https://github.com/user/xsd-zod/issues"
   },
   "exports": {
     ".": "./dist/index.mjs",
+    "./cli": "./dist/cli/index.mjs",
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "bin": {
+    "xsd-zod": "./dist/cli/index.js"
+  },
   "files": [
     "dist"
   ],
@@ -30,7 +32,15 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm run build"
   },
+  "dependencies": {
+    "change-case": "^5.4.4",
+    "commander": "^14.0.2",
+    "fast-xml-parser": "5.3.3",
+    "fs-extra": "^11.2.0",
+    "zod": "^4.3.5"
+  },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.0.3",
     "bumpp": "^10.3.2",
     "tsdown": "0.19.0",
