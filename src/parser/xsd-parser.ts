@@ -1,24 +1,33 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { XsdSchema, XsdElement, XsdComplexType, XsdSimpleType, XsdAttribute } from './types';
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '',
-    parseAttributeValue: false,
-    trimValues: true,
-    textNodeName: '_text'
-  });
+import { extractNamespaces, stripNamespace, getAsArray, getTypeValue } from './namespace';
+
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '',
+  parseAttributeValue: false,
+  trimValues: true,
+  textNodeName: '_text'
+});
+
 export function parseXsd(xsdContent: string): XsdSchema {
-
-
   const parsed = parser.parse(xsdContent);
-  const xsd = parsed['xs:schema'] || parsed['xsd:schema'] || parsed['schema'] || parsed;
 
-  const elements = parseElements(xsd);
-  const complexTypes = parseComplexTypes(xsd);
-  const simpleTypes = parseSimpleTypes(xsd);
+  const xsd = findSchemaElement(parsed);
 
-  const annotation = xsd.annotation || xsd['xsd:annotation'];
-  const annotationSimpleTypes = annotation ? parseSimpleTypesFromAnnotation(annotation) : [];
+  const namespaceContext = extractNamespaces(xsd);
+  const { xsdPrefix } = namespaceContext;
+
+  if (!xsdPrefix) {
+    console.warn('Warning: Could not detect XSD namespace prefix. Schema parsing may fail.');
+  }
+
+  const elements = parseElements(xsd, xsdPrefix || undefined);
+  const complexTypes = parseComplexTypes(xsd, xsdPrefix || undefined);
+  const simpleTypes = parseSimpleTypes(xsd, xsdPrefix || undefined);
+
+  const annotation = getTypeValue(xsd, 'annotation', xsdPrefix || undefined);
+  const annotationSimpleTypes = annotation ? parseSimpleTypesFromAnnotation(annotation, xsdPrefix || undefined) : [];
   simpleTypes.push(...annotationSimpleTypes);
 
   const referencedElements = collectReferencedElements(complexTypes);
@@ -33,22 +42,28 @@ export function parseXsd(xsdContent: string): XsdSchema {
   };
 }
 
-function parseSimpleTypesFromAnnotation(annotation: any): XsdSimpleType[] {
+function findSchemaElement(parsed: any): any {
+  const schemaKeys = Object.keys(parsed).filter(k => k === 'schema' || k.endsWith(':schema'));
+  if (schemaKeys.length === 1) {
+    return parsed[schemaKeys[0]];
+  }
+  if (schemaKeys.length > 1) {
+    console.warn(`Multiple schema elements found: ${schemaKeys.join(', ')}. Using first.`);
+    return parsed[schemaKeys[0]];
+  }
+  return parsed;
+}
+
+function parseSimpleTypesFromAnnotation(annotation: any, xsdPrefix: string | undefined): XsdSimpleType[] {
   const types: XsdSimpleType[] = [];
   
-  const documentation = annotation.documentation || annotation['xsd:documentation'];
-
+  const documentation = getTypeValue(annotation, 'documentation', xsdPrefix);
+  
   if (documentation) {
-    const simpleTypeArray = Array.isArray(documentation.simpleType) ? documentation.simpleType :
-                           Array.isArray(documentation['xsd:simpleType']) ? documentation['xsd:simpleType'] :
-                           Array.isArray(documentation['simpleType']) ? documentation['simpleType'] :
-                           Array.isArray(documentation['simpleType']) ? documentation['simpleType'] :
-                           documentation.simpleType ? [documentation.simpleType] :
-                           documentation['xsd:simpleType'] ? [documentation['xsd:simpleType']] :
-                           documentation['simpleType'] ? [documentation['simpleType']] : [];
-    
+    const simpleTypeArray = getAsArray(documentation, 'simpleType', xsdPrefix);
+
     for (const st of simpleTypeArray) {
-      const simpleType = parseSimpleType(st, st.name);
+      const simpleType = parseSimpleType(st, xsdPrefix, st.name);
       if (simpleType) {
         types.push(simpleType);
       }
@@ -73,7 +88,8 @@ function collectReferencedElements(complexTypes: XsdComplexType[]): XsdElement[]
           minOccurs: el.minOccurs,
           maxOccurs: el.maxOccurs,
           isRef: true,
-          ref: el.ref
+          ref: el.ref,
+          nillable: el.nillable
         };
         referencedElements.push(refElement);
       }
@@ -107,20 +123,14 @@ function collectReferencedElements(complexTypes: XsdComplexType[]): XsdElement[]
   return referencedElements;
 }
 
-function parseElements(xsd: any): XsdElement[] {
+function parseElements(xsd: any, xsdPrefix: string | undefined): XsdElement[] {
   const elements: XsdElement[] = [];
 
-  const elementArray = Array.isArray(xsd.element) ? xsd.element :
-                     Array.isArray(xsd['xs:element']) ? xsd['xs:element'] :
-                     Array.isArray(xsd['xsd:element']) ? xsd['xsd:element'] :
-                     xsd.element ? [xsd.element] :
-                     xsd['xs:element'] ? [xsd['xs:element']] :
-                     xsd['xsd:element'] ? [xsd['xsd:element']] : [];
-
-  const complexTypes = parseComplexTypes(xsd);
+  const elementArray = getAsArray(xsd, 'element', xsdPrefix);
+  const complexTypes = parseComplexTypes(xsd, xsdPrefix);
 
   for (const el of elementArray) {
-      let element = parseElement(el);
+      let element = parseElement(el, xsdPrefix);
 
     if (element && element.type) {
       const complexType = complexTypes.find(ct => ct.name === element.type);
@@ -137,13 +147,13 @@ function parseElements(xsd: any): XsdElement[] {
   return elements;
 }
 
-function parseElement(el: any): XsdElement | null {
+function parseElement(el: any, xsdPrefix: string | undefined): XsdElement | null {
   if (!el) return null;
 
   const element: XsdElement = {
     name: el.name,
-    type: el.type,
-    attributes: parseAttributes(el),
+    type: el.type ? stripNamespace(el.type) : undefined,
+    attributes: parseAttributes(el, xsdPrefix),
     minOccurs: el.minOccurs !== undefined ? parseInt(el.minOccurs) : undefined,
     maxOccurs: el.maxOccurs === 'unbounded' ? 'unbounded' : el.maxOccurs !== undefined ? parseInt(el.maxOccurs) : undefined,
     isRef: !!el.ref,
@@ -151,29 +161,26 @@ function parseElement(el: any): XsdElement | null {
     nillable: el.nillable === 'true' || el.nillable === true
   };
 
-  if (el.complexType || el['xs:complexType']) {
-    element.complexType = parseComplexType(el.complexType || el['xs:complexType'], el.name) ?? undefined;
+  const complexType = getTypeValue(el, 'complexType', xsdPrefix);
+  if (complexType) {
+    element.complexType = parseComplexType(complexType, xsdPrefix, el.name) ?? undefined;
   }
 
-  if (el.simpleType || el['xs:simpleType']) {
-    element.simpleType = parseSimpleType(el.simpleType || el['xs:simpleType'], el.name) ?? undefined;
+  const simpleType = getTypeValue(el, 'simpleType', xsdPrefix);
+  if (simpleType) {
+    element.simpleType = parseSimpleType(simpleType, xsdPrefix, el.name) ?? undefined;
   }
 
   return element;
 }
 
-function parseComplexTypes(xsd: any): XsdComplexType[] {
+function parseComplexTypes(xsd: any, xsdPrefix: string | undefined): XsdComplexType[] {
   const types: XsdComplexType[] = [];
 
-  const typeArray = Array.isArray(xsd.complexType) ? xsd.complexType :
-                     Array.isArray(xsd['xs:complexType']) ? xsd['xs:complexType'] :
-                     Array.isArray(xsd['xsd:complexType']) ? xsd['xsd:complexType'] :
-                     xsd.complexType ? [xsd.complexType] :
-                     xsd['xs:complexType'] ? [xsd['xs:complexType']] :
-                     xsd['xsd:complexType'] ? [xsd['xsd:complexType']] : [];
+  const typeArray = getAsArray(xsd, 'complexType', xsdPrefix);
 
   for (const ct of typeArray) {
-    const complexType = parseComplexType(ct, ct.name);
+    const complexType = parseComplexType(ct, xsdPrefix, ct.name);
     if (complexType) {
       types.push(complexType);
     }
@@ -182,83 +189,80 @@ function parseComplexTypes(xsd: any): XsdComplexType[] {
   return types;
 }
 
-function parseComplexType(ct: any, name?: string): XsdComplexType | null {
+function parseComplexType(ct: any, xsdPrefix: string | undefined, name?: string): XsdComplexType | null {
   if (!ct) return null;
 
   const complexType: XsdComplexType = {
     name,
-    attributes: parseAttributes(ct),
+    attributes: parseAttributes(ct, xsdPrefix),
     content: []
   };
 
-  if (ct.sequence || ct['xs:sequence'] || ct['xsd:sequence']) {
-    const seq = ct.sequence || ct['xs:sequence'] || ct['xsd:sequence'];
-    const parsedSeq = parseNestedElements(seq, complexType);
+  const sequence = getTypeValue(ct, 'sequence', xsdPrefix);
+  if (sequence) {
+    const parsedSeq = parseNestedElements(sequence, complexType, xsdPrefix);
     complexType.sequence = parsedSeq;
     complexType.content.push(...parsedSeq);
   }
 
-  if (ct.choice || ct['xs:choice'] || ct['xsd:choice']) {
-    const ch = ct.choice || ct['xs:choice'] || ct['xsd:choice'];
-    const parsedChoice = parseNestedElements(ch, complexType);
+  const choice = getTypeValue(ct, 'choice', xsdPrefix);
+  if (choice) {
+    const parsedChoice = parseNestedElements(choice, complexType, xsdPrefix);
     complexType.choice = parsedChoice;
     complexType.content.push(...parsedChoice);
   }
 
-  if (ct.all || ct['xs:all'] || ct['xsd:all']) {
-    const a = ct.all || ct['xs:all'] || ct['xsd:all'];
-    const parsedAll = parseNestedElements(a, complexType);
+  const all = getTypeValue(ct, 'all', xsdPrefix);
+  if (all) {
+    const parsedAll = parseNestedElements(all, complexType, xsdPrefix);
     complexType.all = parsedAll;
     complexType.content.push(...parsedAll);
   }
 
-  if (!!(ct.complexContent?.extension || ct['xs:complexContent']?.['xs:extension'] || ct['xsd:complexContent']?.['xsd:extension'] || ct.simpleContent?.extension || ct['xs:simpleContent']?.['xs:extension'] || ct['xsd:simpleContent']?.['xsd:extension'])) {
-    const complexContent = ct.complexContent || ct['xs:complexContent'] || ct['xsd:complexContent'];
-    const simpleContent = ct.simpleContent || ct['xs:simpleContent'] || ct['xsd:simpleContent'];
-    const ext = complexContent?.extension || complexContent?.['xs:extension'] || complexContent?.['xsd:extension'] || simpleContent?.extension || simpleContent?.['xs:extension'] || simpleContent?.['xsd:extension'];
-    const extAttributes = parseAttributes(ext || {});
-    complexType.extension = {
-      base: ext?.base,
-      sequence: (ext?.sequence || ext?.['xs:sequence'] || ext?.['xsd:sequence']) ? parseNestedElements(ext.sequence || ext['xs:sequence'] || ext['xsd:sequence'], complexType) : undefined,
-      attributes: extAttributes
-    };
-    if (complexType.extension?.sequence) {
-      complexType.content.push(...complexType.extension.sequence);
+  const complexContent = getTypeValue(ct, 'complexContent', xsdPrefix);
+  const simpleContent = getTypeValue(ct, 'simpleContent', xsdPrefix);
+
+  if (complexContent || simpleContent) {
+    const content = complexContent || simpleContent;
+    const ext = getTypeValue(content, 'extension', xsdPrefix);
+
+    if (ext) {
+      const extAttributes = parseAttributes(ext, xsdPrefix);
+      const extSequence = getTypeValue(ext, 'sequence', xsdPrefix);
+
+      complexType.extension = {
+        base: ext.base ? stripNamespace(ext.base) : undefined,
+        sequence: extSequence ? parseNestedElements(extSequence, complexType, xsdPrefix) : undefined,
+        attributes: extAttributes
+      };
+      if (complexType.extension?.sequence) {
+        complexType.content.push(...complexType.extension.sequence);
+      }
+      complexType.attributes.push(...extAttributes);
     }
-    complexType.attributes.push(...extAttributes);
   }
 
   return complexType;
 }
 
-function parseNestedElements(container: any, parentComplexType?: XsdComplexType): XsdElement[] {
+function parseNestedElements(container: any, parentComplexType?: XsdComplexType, xsdPrefix?: string): XsdElement[] {
   const elements: XsdElement[] = [];
-  const elementArray = Array.isArray(container.element) ? container.element :
-                     Array.isArray(container['xs:element']) ? container['xs:element'] :
-                     Array.isArray(container['xsd:element']) ? container['xsd:element'] :
-                     container.element ? [container.element] :
-                     container['xs:element'] ? [container['xs:element']] :
-                     container['xsd:element'] ? [container['xsd:element']] : [];
+  const elementArray = getAsArray(container, 'element', xsdPrefix);
 
-  for (const el of elementArray) {  
-    const element = parseElement(el);
+  for (const el of elementArray) {
+    const element = parseElement(el, xsdPrefix);
     if (element) {
       elements.push(element);
     }
   }
 
-  const choiceArray = Array.isArray(container.choice) ? container.choice :
-                     Array.isArray(container['xs:choice']) ? container['xs:choice'] :
-                     Array.isArray(container['xsd:choice']) ? container['xsd:choice'] :
-                     container.choice ? [container.choice] :
-                     container['xs:choice'] ? [container['xs:choice']] :
-                     container['xsd:choice'] ? [container['xsd:choice']] : [];
+  const choiceArray = getAsArray(container, 'choice', xsdPrefix);
 
   for (const ch of choiceArray) {
     if (parentComplexType && !parentComplexType.choice) {
       parentComplexType.choice = [];
     }
-    const choiceElements = parseNestedElements(ch);
+    const choiceElements = parseNestedElements(ch, parentComplexType, xsdPrefix);
     for (const choiceElement of choiceElements) {
       if (choiceElement.complexType && Object.keys(choiceElement.complexType).length > 1) {
         elements.push(choiceElement);
@@ -272,18 +276,13 @@ function parseNestedElements(container: any, parentComplexType?: XsdComplexType)
   return elements;
 }
 
-function parseSimpleTypes(xsd: any): XsdSimpleType[] {
+function parseSimpleTypes(xsd: any, xsdPrefix: string | undefined): XsdSimpleType[] {
   const types: XsdSimpleType[] = [];
 
-  const typeArray = Array.isArray(xsd.simpleType) ? xsd.simpleType :
-                     Array.isArray(xsd['xs:simpleType']) ? xsd['xs:simpleType'] :
-                     Array.isArray(xsd['xsd:simpleType']) ? xsd['xsd:simpleType'] :
-                     xsd.simpleType ? [xsd.simpleType] :
-                     xsd['xs:simpleType'] ? [xsd['xs:simpleType']] :
-                     xsd['xsd:simpleType'] ? [xsd['xsd:simpleType']] : [];
+  const typeArray = getAsArray(xsd, 'simpleType', xsdPrefix);
 
   for (const st of typeArray) {
-    const simpleType = parseSimpleType(st, st.name);
+    const simpleType = parseSimpleType(st, xsdPrefix, st.name);
     if (simpleType) {
       types.push(simpleType);
     }
@@ -292,61 +291,63 @@ function parseSimpleTypes(xsd: any): XsdSimpleType[] {
   return types;
 }
 
-function parseSimpleType(st: any, name?: string): XsdSimpleType | null {
+function parseSimpleType(st: any, xsdPrefix: string | undefined, name?: string): XsdSimpleType | null {
   if (!st) return null;
 
-  const restriction = st.restriction || st['xs:restriction'] || st['xsd:restriction'] || {};
+  const restriction = getTypeValue(st, 'restriction', xsdPrefix) || {};
 
   return {
     name,
     restriction: {
-      base: restriction.base || restriction['xsd:base'] || restriction['xs:base'],
-      enumerations: parseEnumerations(restriction),
-      minLength: (restriction.minLength?.value || restriction['xs:minLength']?.value || restriction['xsd:minLength']?.value) ? parseInt(restriction.minLength?.value || restriction['xs:minLength']?.value || restriction['xsd:minLength']?.value) : undefined,
-      maxLength: (restriction.maxLength?.value || restriction['xs:maxLength']?.value || restriction['xsd:maxLength']?.value) ? parseInt(restriction.maxLength?.value || restriction['xs:maxLength']?.value || restriction['xsd:maxLength']?.value) : undefined,
-      pattern: restriction.pattern?.value || restriction['xs:pattern']?.value,
-      minInclusive: (restriction.minInclusive?.value || restriction['xs:minInclusive']?.value || restriction['xsd:minInclusive']?.value) ? parseFloat(restriction.minInclusive?.value || restriction['xs:minInclusive']?.value || restriction['xsd:minInclusive']?.value) : undefined,
-      maxInclusive: (restriction.maxInclusive?.value || restriction['xs:maxInclusive']?.value || restriction['xsd:maxInclusive']?.value) ? parseFloat(restriction.maxInclusive?.value || restriction['xs:maxInclusive']?.value || restriction['xsd:maxInclusive']?.value) : undefined,
-      minExclusive: (restriction.minExclusive?.value || restriction['xs:minExclusive']?.value || restriction['xsd:minExclusive']?.value) ? parseFloat(restriction.minExclusive?.value || restriction['xs:minExclusive']?.value || restriction['xsd:minExclusive']?.value) : undefined,
-      maxExclusive: (restriction.maxExclusive?.value || restriction['xs:maxExclusive']?.value || restriction['xsd:maxExclusive']?.value) ? parseFloat(restriction.maxExclusive?.value || restriction['xsd:maxExclusive']?.value || restriction['xsd:maxExclusive']?.value) : undefined,
-      totalDigits: (restriction.totalDigits?.value || restriction['xs:totalDigits']?.value || restriction['xsd:totalDigits']?.value) ? parseInt(restriction.totalDigits?.value || restriction['xs:totalDigits']?.value || restriction['xsd:totalDigits']?.value) : undefined,
-      fractionDigits: (restriction.fractionDigits?.value || restriction['xs:fractionDigits']?.value || restriction['xsd:fractionDigits']?.value) ? parseInt(restriction.fractionDigits?.value || restriction['xs:fractionDigits']?.value || restriction['xsd:fractionDigits']?.value) : undefined,
-      length: (restriction.length?.value || restriction['xs:length']?.value || restriction['xsd:length']?.value) ? parseInt(restriction.length?.value || restriction['xs:length']?.value || restriction['xsd:length']?.value) : undefined,
-      whiteSpace: restriction.whiteSpace?.value || restriction['xs:whiteSpace']?.value
+      base: stripNamespace(restriction.base || ''),
+      enumerations: parseEnumerations(restriction, xsdPrefix),
+      minLength: parseFacetValue(restriction, 'minLength', parseInt, xsdPrefix),
+      maxLength: parseFacetValue(restriction, 'maxLength', parseInt, xsdPrefix),
+      pattern: parseFacetValue(restriction, 'pattern', (v) => v, xsdPrefix),
+      minInclusive: parseFacetValue(restriction, 'minInclusive', parseFloat, xsdPrefix),
+      maxInclusive: parseFacetValue(restriction, 'maxInclusive', parseFloat, xsdPrefix),
+      minExclusive: parseFacetValue(restriction, 'minExclusive', parseFloat, xsdPrefix),
+      maxExclusive: parseFacetValue(restriction, 'maxExclusive', parseFloat, xsdPrefix),
+      totalDigits: parseFacetValue(restriction, 'totalDigits', parseInt, xsdPrefix),
+      fractionDigits: parseFacetValue(restriction, 'fractionDigits', parseInt, xsdPrefix),
+      length: parseFacetValue(restriction, 'length', parseInt, xsdPrefix),
+      whiteSpace: parseFacetValue(restriction, 'whiteSpace', (v) => v, xsdPrefix)
     }
   };
 }
 
-function parseEnumerations(restriction: any): string[] | undefined {
-  if (!restriction.enumeration && !restriction['xs:enumeration']) return undefined;
-
-  const enumArray = Array.isArray(restriction.enumeration) ? restriction.enumeration : 
-                    Array.isArray(restriction['xs:enumeration']) ? restriction['xs:enumeration'] :
-                    restriction.enumeration ? [restriction.enumeration] : 
-                    restriction['xs:enumeration'] ? [restriction['xs:enumeration']] : [];
-  return enumArray.map((e: any) => e.value || e);
+function parseFacetValue(restriction: any, facetName: string, parser: (v: any) => any, xsdPrefix: string | undefined): any {
+  const facet = getTypeValue(restriction, facetName, xsdPrefix);
+  if (facet) {
+    const value = facet.value;
+    return value !== undefined ? parser(value) : undefined;
+  }
+  return undefined;
 }
 
-function parseAttributes(parent: any): XsdAttribute[] {
+function parseEnumerations(restriction: any, xsdPrefix: string | undefined): string[] | undefined {
+  const enumerationArray = getAsArray(restriction, 'enumeration', xsdPrefix);
+  
+  if (enumerationArray.length === 0) return undefined;
+  
+  return enumerationArray.map((e: any) => e.value || e);
+}
+
+function parseAttributes(parent: any, xsdPrefix: string | undefined): XsdAttribute[] {
   const attributes: XsdAttribute[] = [];
 
-  if (!parent.attribute && !parent['xs:attribute'] && !parent['xsd:attribute']) return attributes;
-
-  const attrArray = Array.isArray(parent.attribute) ? parent.attribute :
-                     Array.isArray(parent['xs:attribute']) ? parent['xs:attribute'] :
-                     Array.isArray(parent['xsd:attribute']) ? parent['xsd:attribute'] :
-                     parent.attribute ? [parent.attribute] :
-                     parent['xs:attribute'] ? [parent['xs:attribute']] :
-                     parent['xsd:attribute'] ? [parent['xsd:attribute']] : [];
+  const attrArray = getAsArray(parent, 'attribute', xsdPrefix);
 
   for (const attr of attrArray) {
+    const simpleTypeValue = getTypeValue(attr, 'simpleType', xsdPrefix);
+    
     attributes.push({
       name: attr.name,
       type: attr.type,
       use: attr.use || 'optional',
       default: attr.default,
       fixed: attr.fixed,
-      simpleType: (attr.simpleType || attr['xs:simpleType'] || attr['xsd:simpleType']) ? (parseSimpleType(attr.simpleType || attr['xs:simpleType'] || attr['xsd:simpleType']) ?? undefined) : undefined
+      simpleType: simpleTypeValue ? (parseSimpleType(simpleTypeValue, xsdPrefix, attr.name) ?? undefined) : undefined
     });
   }
 

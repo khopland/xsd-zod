@@ -173,7 +173,7 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
       const schema = parseXsd(xsd);
       expect(schema.simpleTypes).toHaveLength(2);
       expect(schema.simpleTypes[0].name).toBe('Tekst');
-      expect(schema.simpleTypes[0].restriction.base).toBe('xsd:string');
+      expect(schema.simpleTypes[0].restriction.base).toBe('string');
       expect(schema.simpleTypes[0].restriction.maxLength).toBe(4000);
       expect(schema.simpleTypes[1].name).toBe('Telefonnummer');
       expect(schema.simpleTypes[1].restriction.base).toBe('Tekst');

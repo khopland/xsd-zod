@@ -1,5 +1,5 @@
 import type { XsdSchema } from '../parser';
-import { mapComplexType } from '../mappers';
+import { mapComplexType, mapPrimitiveType } from '../mappers';
 import { getTypeName, type NamingConvention } from './naming';
 
 export function generateTypes(schema: XsdSchema, naming: NamingConvention): string {
@@ -25,13 +25,8 @@ function generateSimpleTypes(schema: XsdSchema, naming: NamingConvention): strin
       types.push(`export type ${typeName} = ${values};`);
     } else if (simpleType.restriction.base) {
       const base = simpleType.restriction.base;
-      if (base.includes('int') || base.includes('decimal') || base.includes('float') || base.includes('double')) {
-        types.push(`export type ${typeName} = number;`);
-      } else if (base === 'xs:boolean') {
-        types.push(`export type ${typeName} = boolean;`);
-      } else {
-        types.push(`export type ${typeName} = string;`);
-      }
+      const mapping = mapPrimitiveType(base);
+      types.push(`export type ${typeName} = ${mapping.tsType};`);
     }
   }
 

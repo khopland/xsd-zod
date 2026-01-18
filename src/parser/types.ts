@@ -60,7 +60,7 @@ export interface XsdAttribute {
 }
 
 export interface XsdExtension {
-  base: string;
+  base: string | undefined;
   sequence?: XsdElement[];
   attributes: XsdAttribute[];
 }

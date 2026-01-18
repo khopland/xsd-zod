@@ -13,7 +13,7 @@ describe('XSD Parser', () => {
     expect(schema).toBeDefined();
     expect(schema.elements).toHaveLength(1);
     expect(schema.elements[0].name).toBe('User');
-    expect(schema.elements[0].type).toBe('xs:string');
+    expect(schema.elements[0].type).toBe('string');
   });
 
   it('should parse simpleType with enumeration', () => {
@@ -702,5 +702,18 @@ describe('XSD Parser', () => {
     expect(schema.elements).toHaveLength(2);
     expect(schema.elements[1].isRef).toBe(true);
     expect(schema.elements[1].name).toBe('globalElement');
+  });
+
+  it('should parse XSD with custom namespace prefix', () => {
+    const xsd = `<?xml version="1.0" encoding="UTF-8"?>
+<custom:schema xmlns:custom="http://www.w3.org/2001/XMLSchema">
+  <custom:element name="Test" type="custom:string"/>
+</custom:schema>`;
+
+    const schema = parseXsd(xsd);
+    
+    expect(schema.elements).toHaveLength(1);
+    expect(schema.elements[0].name).toBe('Test');
+    expect(schema.elements[0].type).toBe('string');
   });
 });
