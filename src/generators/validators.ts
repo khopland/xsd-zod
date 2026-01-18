@@ -49,16 +49,29 @@ function generateComplexTypeValidators(schema: XsdSchema, naming: NamingConventi
 
 function generateElementValidators(schema: XsdSchema, naming: NamingConvention): string {
   const validators: string[] = [];
-  
-  for (const element of schema.elements) {
-        const schemaName = getSchemaName(element.name, naming);
-    
+  const processedElements = new Set<string>();
+
+  function processElement(element: any, depth: number = 0) {
+    if (!element || !element.name || processedElements.has(element.name)) {
+      return;
+    }
+
+    const schemaName = getSchemaName(element.name, naming);
+
     if (element.complexType) {
+      processedElements.add(element.name);
       const mapped = mapComplexType({ ...element.complexType }, naming, { ...schema });
       validators.push(`export const ${schemaName} = ${mapped.zodObject};`);
+
+      if (element.complexType.content) {
+        for (const childElement of element.complexType.content) {
+          processElement(childElement, depth + 1);
+        }
+      }
     } else if (element.simpleType) {
+      processedElements.add(element.name);
       const st = { ...element.simpleType };
-      
+
       if (st.restriction.enumerations) {
         const mapped = mapEnumeration(st, naming);
         validators.push(`export const ${schemaName} = ${mapped.zodValidator};`);
@@ -70,16 +83,30 @@ function generateElementValidators(schema: XsdSchema, naming: NamingConvention):
     } else if (element.type) {
       const customType = { ...schema }.complexTypes.find(ct => ct.name === element.type) ||
                         { ...schema }.simpleTypes.find(st => st.name === element.type);
-      
+
       if (customType && customType.name) {
+        processedElements.add(element.name);
         const customSchemaName = getSchemaName(customType.name, naming);
         validators.push(`export const ${schemaName} = ${customSchemaName};`);
       } else {
+        processedElements.add(element.name);
         const mapped = mapPrimitiveType(element.type);
         validators.push(`export const ${schemaName} = ${mapped.zodValidator};`);
       }
     }
   }
-  
+
+  for (const element of schema.elements) {
+    processElement(element);
+  }
+
+  for (const complexType of schema.complexTypes) {
+    if (complexType.content) {
+      for (const element of complexType.content) {
+        processElement(element);
+      }
+    }
+  }
+
   return validators.join('\n');
 }

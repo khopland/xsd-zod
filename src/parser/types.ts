@@ -15,6 +15,8 @@ export interface XsdElement {
   minOccurs?: number;
   maxOccurs?: number | 'unbounded';
   isRef?: boolean;
+  ref?: string;
+  nillable?: boolean;
 }
 
 export interface XsdComplexType {

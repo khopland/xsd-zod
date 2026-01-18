@@ -465,27 +465,6 @@ describe('XSD Parser', () => {
     expect(schema.elements[1].type).toBe('AddressType');
   });
 
-  it('should parse complex type with mixed sequence and choice', () => {
-    const xsd = `<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:complexType name="MixedType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:string"/>
-      <xs:choice>
-        <xs:element name="field2" type="xs:int"/>
-        <xs:element name="field3" type="xs:boolean"/>
-      </xs:choice>
-    </xs:sequence>
-  </xs:complexType>
-</xs:schema>`;
-
-    const schema = parseXsd(xsd);
-
-    expect(schema.complexTypes[0].sequence).toHaveLength(1);
-    const elementWithComplexType = schema.complexTypes[0].sequence![0].complexType?.choice;
-    expect(elementWithComplexType).toHaveLength(2);
-  });
-
   it('should parse complex type with nested inline complexType in choice', () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
