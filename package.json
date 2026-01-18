@@ -5,13 +5,13 @@
   "description": "Generate Zod validators and TypeScript types from XSD schemas",
   "author": "",
   "license": "MIT",
-  "homepage": "https://github.com/user/xsd-zod#readme",
+  "homepage": "https://github.com/khopland/xsd-zod#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/user/xsd-zod.git"
+    "url": "git+https://github.com/khopland/xsd-zod.git"
   },
   "bugs": {
-    "url": "https://github.com/user/xsd-zod/issues"
+    "url": "https://github.com/khopland/xsd-zod/issues"
   },
   "exports": {
     ".": "./dist/index.mjs",
@@ -20,7 +20,7 @@
   },
   "types": "./dist/index.d.mts",
   "bin": {
-    "xsd-zod": "./dist/cli/index.js"
+    "xsd-zod": "dist/cli/index.mjs"
   },
   "files": [
     "dist"
