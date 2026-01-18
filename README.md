@@ -62,13 +62,13 @@ This creates `schema.types.ts` and `schema.validators.ts` in the `./generated` d
 ### Programmatic API
 
 ```typescript
-import { compileXsd } from 'xsd-zod';
+import { compileXsd } from "xsd-zod";
 
 await compileXsd({
-  input: 'schema.xsd',
-  output: './generated',
-  naming: 'camel',
-  separate: true
+  input: "schema.xsd",
+  output: "./generated",
+  naming: "camel",
+  separate: true,
 });
 ```
 
@@ -105,13 +105,13 @@ xsd-zod ./schemas -o ./generated
 Batch process multiple schemas:
 
 ```typescript
-import { compileXsd } from 'xsd-zod';
+import { compileXsd } from "xsd-zod";
 
 await compileXsd({
-  input: './schemas',
-  output: './src/validators',
-  naming: 'pascal',
-  separate: false  // Single file per schema
+  input: "./schemas",
+  output: "./src/validators",
+  naming: "pascal",
+  separate: false, // Single file per schema
 });
 ```
 
@@ -119,20 +119,20 @@ Custom naming convention:
 
 ```typescript
 await compileXsd({
-  input: 'schema.xsd',
-  output: './generated',
-  naming: 'kebab'  // kebab-case names
+  input: "schema.xsd",
+  output: "./generated",
+  naming: "kebab", // kebab-case names
 });
 ```
 
 ## ⚙️ CLI Options
 
-| Option | Alias | Description | Default |
-|--------|-------|-------------|---------|
-| `--output <dir>` | `-o` | Output directory for generated files | `./generated` |
-| `--naming <conv>` | `-n` | Naming convention: `camel`, `pascal`, `original`, `kebab` | `camel` |
-| `--separate` | `-s` | Generate separate type and validator files | `true` |
-| `--combined` | `-c` | Generate single combined file | `false` |
+| Option            | Alias | Description                                               | Default       |
+| ----------------- | ----- | --------------------------------------------------------- | ------------- |
+| `--output <dir>`  | `-o`  | Output directory for generated files                      | `./generated` |
+| `--naming <conv>` | `-n`  | Naming convention: `camel`, `pascal`, `original`, `kebab` | `camel`       |
+| `--separate`      | `-s`  | Generate separate type and validator files                | `true`        |
+| `--combined`      | `-c`  | Generate single combined file                             | `false`       |
 
 ## 🔌 API Reference
 
@@ -144,10 +144,10 @@ Main function to compile XSD files into TypeScript and Zod code.
 
 ```typescript
 interface CompileOptions {
-  input: string;          // Path to XSD file or directory
-  output: string;         // Output directory path
-  naming?: 'camel' | 'pascal' | 'original' | 'kebab';  // Naming convention
-  separate?: boolean;     // Generate separate files (true) or combined (false)
+  input: string; // Path to XSD file or directory
+  output: string; // Output directory path
+  naming?: "camel" | "pascal" | "original" | "kebab"; // Naming convention
+  separate?: boolean; // Generate separate files (true) or combined (false)
 }
 ```
 
@@ -201,7 +201,7 @@ Input XSD (`schema.xsd`):
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  
+
   <xs:simpleType name="StatusType">
     <xs:restriction base="xs:string">
       <xs:enumeration value="active"/>
@@ -209,7 +209,7 @@ Input XSD (`schema.xsd`):
       <xs:enumeration value="pending"/>
     </xs:restriction>
   </xs:simpleType>
-  
+
   <xs:complexType name="AddressType">
     <xs:sequence>
       <xs:element name="street" type="xs:string"/>
@@ -218,7 +218,7 @@ Input XSD (`schema.xsd`):
     </xs:sequence>
     <xs:attribute name="type" type="xs:string" use="required"/>
   </xs:complexType>
-  
+
   <xs:complexType name="UserType">
     <xs:sequence>
       <xs:element name="firstName" type="xs:string"/>
@@ -231,16 +231,16 @@ Input XSD (`schema.xsd`):
     <xs:attribute name="id" type="xs:string" use="required"/>
     <xs:attribute name="created" type="xs:dateTime"/>
   </xs:complexType>
-  
+
   <xs:element name="User" type="UserType"/>
-  
+
 </xs:schema>
 ```
 
 Generated TypeScript Types (`schema.types.ts`):
 
 ```typescript
-export type StatusType = 'active' | 'inactive' | 'pending';
+export type StatusType = "active" | "inactive" | "pending";
 
 export interface AddressType {
   street: string;
@@ -264,15 +264,15 @@ export interface UserType {
 Generated Zod Validators (`schema.validators.ts`):
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
-export const StatusTypeSchema = z.enum(['active', 'inactive', 'pending']);
+export const StatusTypeSchema = z.enum(["active", "inactive", "pending"]);
 
 export const AddressTypeSchema = z.object({
   street: z.string(),
   city: z.string(),
   zipCode: z.string().optional(),
-  type: z.string()
+  type: z.string(),
 });
 
 export const UserTypeSchema = z.object({
@@ -283,7 +283,7 @@ export const UserTypeSchema = z.object({
   status: StatusTypeSchema,
   address: AddressTypeSchema.optional(),
   id: z.string(),
-  created: z.string().datetime().optional()
+  created: z.string().datetime().optional(),
 });
 ```
 

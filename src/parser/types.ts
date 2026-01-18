@@ -1,6 +1,6 @@
 export interface XsdSchema {
   targetNamespace?: string;
-  elementFormDefault?: 'qualified' | 'unqualified';
+  elementFormDefault?: "qualified" | "unqualified";
   elements: XsdElement[];
   complexTypes: XsdComplexType[];
   simpleTypes: XsdSimpleType[];
@@ -13,7 +13,7 @@ export interface XsdElement {
   simpleType?: XsdSimpleType | null;
   attributes: XsdAttribute[];
   minOccurs?: number;
-  maxOccurs?: number | 'unbounded';
+  maxOccurs?: number | "unbounded";
   isRef?: boolean;
   ref?: string;
   nillable?: boolean;
@@ -47,13 +47,13 @@ export interface XsdRestriction {
   totalDigits?: number;
   fractionDigits?: number;
   length?: number;
-  whiteSpace?: 'preserve' | 'replace' | 'collapse';
+  whiteSpace?: "preserve" | "replace" | "collapse";
 }
 
 export interface XsdAttribute {
   name: string;
   type?: string;
-  use?: 'optional' | 'required' | 'prohibited';
+  use?: "optional" | "required" | "prohibited";
   default?: string;
   fixed?: string;
   simpleType?: XsdSimpleType | null;

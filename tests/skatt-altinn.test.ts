@@ -1,21 +1,20 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { parseXsd, compileXsd } from '../src';
-import { readFile, rm } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { describe, it, expect, afterEach } from "vitest";
+import { parseXsd, compileXsd } from "../src";
+import { readFile, rm } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
 
-describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
-  const outputDir = 'tests/output';
+describe("Norwegian Tax Authority XSD (skatt-altinn.xsd)", () => {
+  const outputDir = "tests/output";
 
   afterEach(async () => {
     try {
       await rm(outputDir, { recursive: true, force: true });
-    } catch {
-    }
+    } catch {}
   });
 
-  describe('Parser Tests', () => {
-    it('should parse custom namespace with skatt: prefix', () => {
+  describe("Parser Tests", () => {
+    it("should parse custom namespace with skatt: prefix", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:skatt="http://www.skatteetaten.no/xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
   <xsd:element name="melding" type="EgenerklaeringRegnskap"/>
@@ -31,7 +30,7 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
       expect(schema.complexTypes).toHaveLength(1);
     });
 
-    it('should parse root element with type reference', () => {
+    it("should parse root element with type reference", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
   <xsd:element name="melding" type="EgenerklaeringRegnskap"/>
@@ -43,11 +42,11 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
 </xsd:schema>`;
 
       const schema = parseXsd(xsd);
-      expect(schema.elements[0].name).toBe('melding');
-      expect(schema.elements[0].type).toBe('EgenerklaeringRegnskap');
+      expect(schema.elements[0].name).toBe("melding");
+      expect(schema.elements[0].type).toBe("EgenerklaeringRegnskap");
     });
 
-    it('should parse 3-level nested types', () => {
+    it("should parse 3-level nested types", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
   <xsd:element name="melding" type="EgenerklaeringRegnskap"/>
@@ -73,14 +72,14 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
 
       const schema = parseXsd(xsd);
       expect(schema.complexTypes).toHaveLength(3);
-      expect(schema.complexTypes[0].name).toBe('EgenerklaeringRegnskap');
-      expect(schema.complexTypes[1].name).toBe('InformasjonOmInnsender');
-      expect(schema.complexTypes[2].name).toBe('Kontaktinformasjon');
+      expect(schema.complexTypes[0].name).toBe("EgenerklaeringRegnskap");
+      expect(schema.complexTypes[1].name).toBe("InformasjonOmInnsender");
+      expect(schema.complexTypes[2].name).toBe("Kontaktinformasjon");
       expect(schema.simpleTypes).toHaveLength(1);
-      expect(schema.simpleTypes[0].name).toBe('Navn');
+      expect(schema.simpleTypes[0].name).toBe("Navn");
     });
 
-    it('should parse nillable elements', () => {
+    it("should parse nillable elements", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
   <xsd:complexType name="TestType">
@@ -94,7 +93,7 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
       const schema = parseXsd(xsd);
       const sequence = schema.complexTypes[0].sequence;
       expect(sequence).toHaveLength(2);
-      expect(sequence?.[0]).toHaveProperty('nillable');
+      expect(sequence?.[0]).toHaveProperty("nillable");
     });
 
     it('should parse optional elements with minOccurs="0"', () => {
@@ -127,17 +126,17 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
 
       const schema = parseXsd(xsd);
       const testElement = schema.elements[0];
-      expect(testElement.name).toBe('TestElement');
-      expect(testElement.type).toBe('TestType');
+      expect(testElement.name).toBe("TestElement");
+      expect(testElement.type).toBe("TestType");
       const testComplexType = schema.complexTypes[0];
-      expect(testComplexType.name).toBe('TestType');
+      expect(testComplexType.name).toBe("TestType");
       const attributes = testComplexType.attributes;
       expect(attributes).toHaveLength(2);
-      expect(attributes[0].use).toBe('required');
-      expect(attributes[1].use).toBe('optional');
+      expect(attributes[0].use).toBe("required");
+      expect(attributes[1].use).toBe("optional");
     });
 
-    it('should parse fixed attribute values', () => {
+    it("should parse fixed attribute values", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
   <xsd:complexType name="TestType">
@@ -149,15 +148,15 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
 
       const schema = parseXsd(xsd);
       const testElement = schema.elements[0];
-      expect(testElement.name).toBe('TestElement');
-      expect(testElement.type).toBe('TestType');
+      expect(testElement.name).toBe("TestElement");
+      expect(testElement.type).toBe("TestType");
       const attributes = schema.complexTypes[0].attributes;
       expect(attributes).toHaveLength(2);
-      expect(attributes[0].fixed).toBe('Skatt');
-      expect(attributes[1].fixed).toBe('RF-1363');
+      expect(attributes[0].fixed).toBe("Skatt");
+      expect(attributes[1].fixed).toBe("RF-1363");
     });
 
-    it('should parse simple type definitions with base restrictions', () => {
+    it("should parse simple type definitions with base restrictions", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <xsd:simpleType name="Tekst">
@@ -172,14 +171,14 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
 
       const schema = parseXsd(xsd);
       expect(schema.simpleTypes).toHaveLength(2);
-      expect(schema.simpleTypes[0].name).toBe('Tekst');
-      expect(schema.simpleTypes[0].restriction.base).toBe('string');
+      expect(schema.simpleTypes[0].name).toBe("Tekst");
+      expect(schema.simpleTypes[0].restriction.base).toBe("string");
       expect(schema.simpleTypes[0].restriction.maxLength).toBe(4000);
-      expect(schema.simpleTypes[1].name).toBe('Telefonnummer');
-      expect(schema.simpleTypes[1].restriction.base).toBe('Tekst');
+      expect(schema.simpleTypes[1].name).toBe("Telefonnummer");
+      expect(schema.simpleTypes[1].restriction.base).toBe("Tekst");
     });
 
-    it('should parse complex type sequences', () => {
+    it("should parse complex type sequences", () => {
       const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
   <xsd:complexType name="Kontaktinformasjon">
@@ -202,88 +201,88 @@ describe('Norwegian Tax Authority XSD (skatt-altinn.xsd)', () => {
 
       const schema = parseXsd(xsd);
       const kontaktType = schema.complexTypes[0];
-      expect(kontaktType.name).toBe('Kontaktinformasjon');
+      expect(kontaktType.name).toBe("Kontaktinformasjon");
       expect(kontaktType.sequence).toHaveLength(3);
-      expect(kontaktType.sequence?.[0].name).toBe('navn');
-      expect(kontaktType.sequence?.[1].name).toBe('epostadresse');
-      expect(kontaktType.sequence?.[2].name).toBe('mobiltelefonummer');
+      expect(kontaktType.sequence?.[0].name).toBe("navn");
+      expect(kontaktType.sequence?.[1].name).toBe("epostadresse");
+      expect(kontaktType.sequence?.[2].name).toBe("mobiltelefonummer");
     });
   });
 
-  describe('Integration Tests', () => {
-    it('should compile skatt-altinn.xsd to TypeScript and Zod files', async () => {
+  describe("Integration Tests", () => {
+    it("should compile skatt-altinn.xsd to TypeScript and Zod files", async () => {
       await compileXsd({
-        input: 'tests/fixtures/skatt-altinn.xsd',
+        input: "tests/fixtures/skatt-altinn.xsd",
         output: outputDir,
-        naming: 'camel',
+        naming: "camel",
         separate: true,
-        watch: false
+        watch: false,
       });
 
-      const typesPath = join(outputDir, 'skatt-altinn.types.ts');
-      const validatorsPath = join(outputDir, 'skatt-altinn.validators.ts');
+      const typesPath = join(outputDir, "skatt-altinn.types.ts");
+      const validatorsPath = join(outputDir, "skatt-altinn.validators.ts");
 
       expect(existsSync(typesPath)).toBe(true);
       expect(existsSync(validatorsPath)).toBe(true);
 
-      const types = await readFile(typesPath, 'utf-8');
-      const validators = await readFile(validatorsPath, 'utf-8');
+      const types = await readFile(typesPath, "utf-8");
+      const validators = await readFile(validatorsPath, "utf-8");
 
-      expect(types).toContain('Melding');
-      expect(types).toContain('EgenerklaeringRegnskap');
-      expect(types).toContain('InformasjonOmInnsender');
-      expect(types).toContain('Kontaktinformasjon');
-      expect(types).toContain('Oppgaveinformasjon');
-      expect(types).toContain('Oppgaveinformasjon');
+      expect(types).toContain("Melding");
+      expect(types).toContain("EgenerklaeringRegnskap");
+      expect(types).toContain("InformasjonOmInnsender");
+      expect(types).toContain("Kontaktinformasjon");
+      expect(types).toContain("Oppgaveinformasjon");
+      expect(types).toContain("Oppgaveinformasjon");
 
       expect(validators).toContain("import { z } from 'zod'");
-      expect(validators).toContain('MeldingSchema');
-      expect(validators).toContain('EgenerklaeringRegnskapSchema');
-      expect(validators).toContain('InformasjonOmInnsenderSchema');
-      expect(validators).toContain('KontaktinformasjonSchema');
-      expect(validators).toContain('MobiltelefonummerSchema');
-      expect(validators).toContain('TekstSchema');
-      expect(validators).toContain('TelefonnummerSchema');
+      expect(validators).toContain("MeldingSchema");
+      expect(validators).toContain("EgenerklaeringRegnskapSchema");
+      expect(validators).toContain("InformasjonOmInnsenderSchema");
+      expect(validators).toContain("KontaktinformasjonSchema");
+      expect(validators).toContain("MobiltelefonummerSchema");
+      expect(validators).toContain("TekstSchema");
+      expect(validators).toContain("TelefonnummerSchema");
     });
 
-    it('should handle optional fields correctly', async () => {
+    it("should handle optional fields correctly", async () => {
       await compileXsd({
-        input: 'tests/fixtures/skatt-altinn.xsd',
+        input: "tests/fixtures/skatt-altinn.xsd",
         output: outputDir,
-        naming: 'camel',
+        naming: "camel",
         separate: true,
-        watch: false
+        watch: false,
       });
 
-      const typesPath = join(outputDir, 'skatt-altinn.types.ts');
-      const validatorsPath = join(outputDir, 'skatt-altinn.validators.ts');
+      const typesPath = join(outputDir, "skatt-altinn.types.ts");
+      const validatorsPath = join(outputDir, "skatt-altinn.validators.ts");
 
-      const types = await readFile(typesPath, 'utf-8');
-      const validators = await readFile(validatorsPath, 'utf-8');
+      const types = await readFile(typesPath, "utf-8");
+      const validators = await readFile(validatorsPath, "utf-8");
 
-      expect(types).toContain('oppgaveinformasjon?:');
-      expect(types).toContain('informasjonOmInnsender?:');
-      expect(types).toContain('kontaktinformasjon?:');
+      expect(types).toContain("oppgaveinformasjon?:");
+      expect(types).toContain("informasjonOmInnsender?:");
+      expect(types).toContain("kontaktinformasjon?:");
 
-      expect(validators).toContain('.optional()');
+      expect(validators).toContain(".optional()");
     });
 
-    it('should handle required attributes correctly', async () => {
+    it("should handle required attributes correctly", async () => {
       await compileXsd({
-        input: 'tests/fixtures/skatt-altinn.xsd',
+        input: "tests/fixtures/skatt-altinn.xsd",
         output: outputDir,
-        naming: 'camel',
+        naming: "camel",
         separate: true,
-        watch: false
+        watch: false,
       });
 
-      const typesPath = join(outputDir, 'skatt-altinn.types.ts');
+      const typesPath = join(outputDir, "skatt-altinn.types.ts");
 
-      const types = await readFile(typesPath, 'utf-8');
+      const types = await readFile(typesPath, "utf-8");
 
-      expect(types).toContain('dataFormatProvider: string');
-      expect(types).toContain('dataFormatId: string');
-      expect(types).toContain('dataFormatVersion: string');
+      expect(types).toContain("dataFormatProvider: string");
+      expect(types).toContain("dataFormatId: string");
+      expect(types).toContain("dataFormatVersion: string");
     });
   });
 });

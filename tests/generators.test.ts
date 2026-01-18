@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { generateTypes, generateValidators } from '../src/generators';
-import { parseXsd } from '../src/parser';
+import { describe, it, expect } from "vitest";
+import { generateTypes, generateValidators } from "../src/generators";
+import { parseXsd } from "../src/parser";
 
-describe('Type Generator', () => {
-  it('should generate simple type definition', () => {
+describe("Type Generator", () => {
+  it("should generate simple type definition", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:simpleType name="Status">
@@ -14,13 +14,13 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('export type Status');
+    expect(types).toContain("export type Status");
     expect(types).toContain("'active'");
   });
 
-  it('should generate interface for complex type', () => {
+  it("should generate interface for complex type", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="User">
@@ -32,14 +32,14 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-     expect(types).toContain('export interface User');
-     expect(types).toContain('name: string');
-     expect(types).toContain('age: number');
-   });
+    expect(types).toContain("export interface User");
+    expect(types).toContain("name: string");
+    expect(types).toContain("age: number");
+  });
 
-   it('should mark optional fields correctly', () => {
+  it("should mark optional fields correctly", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="User">
@@ -51,16 +51,16 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
-    const validators = generateValidators(schema, 'camel');
+    const types = generateTypes(schema, "camel");
+    const validators = generateValidators(schema, "camel");
 
-    expect(types).toContain('name?: string');
-    expect(types).toContain('age: number');
-    expect(validators).toContain('name: z.string().optional()');
-    expect(validators).toContain('age: z.number().int()');
+    expect(types).toContain("name?: string");
+    expect(types).toContain("age: number");
+    expect(validators).toContain("name: z.string().optional()");
+    expect(validators).toContain("age: z.number().int()");
   });
 
-  it('should generate type for element', () => {
+  it("should generate type for element", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="User">
@@ -73,13 +73,13 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('export interface User');
-    expect(types).toContain('name: string');
+    expect(types).toContain("export interface User");
+    expect(types).toContain("name: string");
   });
 
-  it('should generate array types for unbounded elements', () => {
+  it("should generate array types for unbounded elements", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="List">
@@ -90,12 +90,12 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('item: string[]');
+    expect(types).toContain("item: string[]");
   });
 
-  it('should include attributes in interface', () => {
+  it("should include attributes in interface", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="User">
@@ -108,13 +108,13 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('id: string');
-    expect(types).toContain('active?: boolean');
+    expect(types).toContain("id: string");
+    expect(types).toContain("active?: boolean");
   });
 
-  it('should use pascal case for type names', () => {
+  it("should use pascal case for type names", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="user_profile">
@@ -125,12 +125,12 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('export interface UserProfile');
+    expect(types).toContain("export interface UserProfile");
   });
 
-  it('should keep original names with original naming', () => {
+  it("should keep original names with original naming", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="UserProfile">
@@ -141,13 +141,13 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'original');
+    const types = generateTypes(schema, "original");
 
-    expect(types).toContain('export interface UserProfile');
-    expect(types).toContain('first_name: string');
+    expect(types).toContain("export interface UserProfile");
+    expect(types).toContain("first_name: string");
   });
 
-  it('should generate number type for integer restrictions', () => {
+  it("should generate number type for integer restrictions", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:simpleType name="PositiveInt">
@@ -158,12 +158,12 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('export type PositiveInt = number');
+    expect(types).toContain("export type PositiveInt = number");
   });
 
-  it('should generate boolean type', () => {
+  it("should generate boolean type", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:simpleType name="BooleanType">
@@ -172,27 +172,27 @@ describe('Type Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('export type BooleanType = boolean');
+    expect(types).toContain("export type BooleanType = boolean");
   });
 
-  it('should include comment header', () => {
+  it("should include comment header", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="Test" type="xs:string"/>
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const types = generateTypes(schema, 'camel');
+    const types = generateTypes(schema, "camel");
 
-    expect(types).toContain('// Generated TypeScript types from XSD schema');
-    expect(types).toContain('// Do not edit manually');
+    expect(types).toContain("// Generated TypeScript types from XSD schema");
+    expect(types).toContain("// Do not edit manually");
   });
 });
 
-describe('Validator Generator', () => {
-  it('should generate zod schema for simple type', () => {
+describe("Validator Generator", () => {
+  it("should generate zod schema for simple type", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:simpleType name="Email">
@@ -204,15 +204,15 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
     expect(validators).toContain("import { z } from 'zod'");
-    expect(validators).toContain('export const EmailSchema');
-    expect(validators).toContain('.min(5)');
-    expect(validators).toContain('.max(255)');
+    expect(validators).toContain("export const EmailSchema");
+    expect(validators).toContain(".min(5)");
+    expect(validators).toContain(".max(255)");
   });
 
-  it('should generate zod object for complex type', () => {
+  it("should generate zod object for complex type", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="User">
@@ -223,16 +223,16 @@ describe('Validator Generator', () => {
   </xs:complexType>
 </xs:schema>`;
 
-     const schema = parseXsd(xsd);
-     const validators = generateValidators(schema, 'camel');
+    const schema = parseXsd(xsd);
+    const validators = generateValidators(schema, "camel");
 
-     expect(validators).toContain('export const UserSchema');
-     expect(validators).toContain('z.object({');
-     expect(validators).toContain('name: z.string()');
-     expect(validators).toContain('age: z.number().int()');
-   });
+    expect(validators).toContain("export const UserSchema");
+    expect(validators).toContain("z.object({");
+    expect(validators).toContain("name: z.string()");
+    expect(validators).toContain("age: z.number().int()");
+  });
 
-  it('should generate zod enum for enumeration', () => {
+  it("should generate zod enum for enumeration", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:simpleType name="Status">
@@ -244,13 +244,13 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('export const StatusSchema');
+    expect(validators).toContain("export const StatusSchema");
     expect(validators).toContain("z.enum(['active', 'inactive'])");
   });
 
-  it('should mark optional fields with .optional()', () => {
+  it("should mark optional fields with .optional()", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="User">
@@ -262,13 +262,13 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('name: z.string()');
-    expect(validators).toContain('age: z.number().int().optional()');
+    expect(validators).toContain("name: z.string()");
+    expect(validators).toContain("age: z.number().int().optional()");
   });
 
-  it('should generate array schemas for unbounded elements', () => {
+  it("should generate array schemas for unbounded elements", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="List">
@@ -279,12 +279,12 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('item: z.array(z.string())');
+    expect(validators).toContain("item: z.array(z.string())");
   });
 
- it('should include attributes in zod object', () => {
+  it("should include attributes in zod object", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="User">
@@ -297,13 +297,13 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('id: z.string()');
-    expect(validators).toContain('active: z.boolean().optional()');
+    expect(validators).toContain("id: z.string()");
+    expect(validators).toContain("active: z.boolean().optional()");
   });
 
-  it('should apply regex pattern facet', () => {
+  it("should apply regex pattern facet", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:simpleType name="Email">
@@ -314,12 +314,12 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('.regex(/');
+    expect(validators).toContain(".regex(/");
   });
 
-  it('should use camel case for schema names', () => {
+  it("should use camel case for schema names", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="UserProfile">
@@ -330,13 +330,13 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('export const UserProfileSchema');
-    expect(validators).toContain('firstName:');
+    expect(validators).toContain("export const UserProfileSchema");
+    expect(validators).toContain("firstName:");
   });
 
-  it('should use pascal case for schema names', () => {
+  it("should use pascal case for schema names", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:complexType name="UserProfile">
@@ -347,12 +347,12 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'pascal');
+    const validators = generateValidators(schema, "pascal");
 
-    expect(validators).toContain('export const UserProfileSchema');
+    expect(validators).toContain("export const UserProfileSchema");
   });
 
-  it('should generate validator for element', () => {
+  it("should generate validator for element", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="User">
@@ -365,22 +365,22 @@ describe('Validator Generator', () => {
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('export const UserSchema');
-    expect(validators).toContain('z.object({');
+    expect(validators).toContain("export const UserSchema");
+    expect(validators).toContain("z.object({");
   });
 
-  it('should include comment header', () => {
+  it("should include comment header", () => {
     const xsd = `<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="Test" type="xs:string"/>
 </xs:schema>`;
 
     const schema = parseXsd(xsd);
-    const validators = generateValidators(schema, 'camel');
+    const validators = generateValidators(schema, "camel");
 
-    expect(validators).toContain('// Generated Zod validators from XSD schema');
-    expect(validators).toContain('// Do not edit manually');
+    expect(validators).toContain("// Generated Zod validators from XSD schema");
+    expect(validators).toContain("// Do not edit manually");
   });
 });

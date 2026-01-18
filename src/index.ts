@@ -1,10 +1,14 @@
-import { writeFile, mkdir } from 'fs/promises';
-import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
-import { join, basename, extname, resolve } from 'path';
-import { parseXsd } from './parser';
-import { generateTypes, generateValidators,type NamingConvention } from './generators';
-import type { CompileOptions } from './config';
-import { validateOptions } from './config';
+import { writeFile, mkdir } from "fs/promises";
+import { readFileSync, readdirSync, statSync, existsSync } from "fs";
+import { join, basename, extname, resolve } from "path";
+import { parseXsd } from "./parser";
+import {
+  generateTypes,
+  generateValidators,
+  type NamingConvention,
+} from "./generators";
+import type { CompileOptions } from "./config";
+import { validateOptions } from "./config";
 
 export async function compileXsd(options: CompileOptions): Promise<void> {
   validateOptions(options);
@@ -32,7 +36,10 @@ export async function compileXsd(options: CompileOptions): Promise<void> {
       const validatorsCode = generateValidators(schema, naming);
 
       await writeFile(join(outputPath, `${baseName}.types.ts`), typesCode);
-      await writeFile(join(outputPath, `${baseName}.validators.ts`), validatorsCode);
+      await writeFile(
+        join(outputPath, `${baseName}.validators.ts`),
+        validatorsCode,
+      );
     } else {
       const typesCode = generateTypes(schema, naming);
       const validatorsCode = generateValidators(schema, naming);
@@ -41,10 +48,14 @@ export async function compileXsd(options: CompileOptions): Promise<void> {
       await writeFile(join(outputPath, `${baseName}.ts`), combinedCode);
     }
 
-    console.log(`✓ Generated ${baseName}${options.separate ? '.types.ts and ' + baseName + '.validators.ts' : '.ts'}`);
+    console.log(
+      `✓ Generated ${baseName}${options.separate ? ".types.ts and " + baseName + ".validators.ts" : ".ts"}`,
+    );
   }
 
-  console.log(`\n✓ Successfully generated files from ${xsdFiles.length} XSD file(s)`);
+  console.log(
+    `\n✓ Successfully generated files from ${xsdFiles.length} XSD file(s)`,
+  );
 }
 
 async function getXsdFiles(inputPath: string): Promise<string[]> {
@@ -54,7 +65,7 @@ async function getXsdFiles(inputPath: string): Promise<string[]> {
     const stats = statSync(path);
 
     if (stats.isFile()) {
-      if (extname(path).toLowerCase() === '.xsd') {
+      if (extname(path).toLowerCase() === ".xsd") {
         files.push(path);
       }
     } else if (stats.isDirectory()) {
@@ -78,7 +89,7 @@ async function ensureDir(dir: string): Promise<void> {
 function readFileContent(path: string): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      const content = readFileSync(path, 'utf-8');
+      const content = readFileSync(path, "utf-8");
       resolve(content);
     } catch (error) {
       reject(error);
@@ -86,6 +97,6 @@ function readFileContent(path: string): Promise<string> {
   });
 }
 
-export * from './parser';
-export * from './generators';
-export * from './config';
+export * from "./parser";
+export * from "./generators";
+export * from "./config";
