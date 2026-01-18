@@ -5,17 +5,60 @@ import { getTypeName, type NamingConvention } from './naming';
 export function generateTypes(schema: XsdSchema, naming: NamingConvention): string {
   const imports = `// Generated TypeScript types from XSD schema\n// Do not edit manually\n\n`;
 
-  const simpleTypes = generateSimpleTypes(schema, naming);
+  const sortedSimpleTypes = topologicalSortSimpleTypes(schema, naming);
+  const simpleTypes = generateSimpleTypes(schema, naming, sortedSimpleTypes);
   const complexTypes = generateComplexTypes(schema, naming);
   const elementTypes = generateElementTypes(schema, naming);
 
   return `${imports}${simpleTypes}\n\n${complexTypes}\n\n${elementTypes}`;
 }
 
-function generateSimpleTypes(schema: XsdSchema, naming: NamingConvention): string {
-  const types: string[] = [];
-
+function topologicalSortSimpleTypes(schema: XsdSchema, naming: NamingConvention): typeof schema.simpleTypes {
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const result: any[] = [];
+  const nameToIndex = new Map<string, number>();
+  
+  schema.simpleTypes.forEach((st, idx) => {
+    if (st.name) nameToIndex.set(st.name, idx);
+  });
+  
+  function visit(simpleType: any) {
+    if (!simpleType.name) return;
+    
+    if (visited.has(simpleType.name)) return;
+    if (visiting.has(simpleType.name)) {
+      console.warn(`Circular dependency detected involving ${simpleType.name}`);
+      return;
+    }
+    
+    visiting.add(simpleType.name);
+    
+    const baseTypeName = simpleType.restriction?.base;
+    if (baseTypeName) {
+      const depIndex = nameToIndex.get(baseTypeName);
+      if (depIndex !== undefined) {
+        visit(schema.simpleTypes[depIndex]);
+      }
+    }
+    
+    visiting.delete(simpleType.name);
+    visited.add(simpleType.name);
+    result.push(simpleType);
+  }
+  
   for (const simpleType of schema.simpleTypes) {
+    visit(simpleType);
+  }
+  
+  return result;
+}
+
+function generateSimpleTypes(schema: XsdSchema, naming: NamingConvention, sortedSimpleTypes?: typeof schema.simpleTypes): string {
+  const types: string[] = [];
+  const simpleTypesToProcess = sortedSimpleTypes || schema.simpleTypes;
+
+  for (const simpleType of simpleTypesToProcess) {
     if (!simpleType.name) continue;
 
     const typeName = getTypeName(simpleType.name, naming);
@@ -24,9 +67,17 @@ function generateSimpleTypes(schema: XsdSchema, naming: NamingConvention): strin
       const values = simpleType.restriction.enumerations.map(v => `'${v}'`).join(' | ');
       types.push(`export type ${typeName} = ${values};`);
     } else if (simpleType.restriction.base) {
-      const base = simpleType.restriction.base;
-      const mapping = mapPrimitiveType(base);
-      types.push(`export type ${typeName} = ${mapping.tsType};`);
+      const baseTypeName = simpleType.restriction.base;
+      
+      const customBaseType = schema.simpleTypes.find(st => st.name === baseTypeName);
+      
+      if (customBaseType) {
+        const baseTypeNameResolved = getTypeName(baseTypeName, naming);
+        types.push(`export type ${typeName} = ${baseTypeNameResolved};`);
+      } else {
+        const mapping = mapPrimitiveType(baseTypeName);
+        types.push(`export type ${typeName} = ${mapping.tsType};`);
+      }
     }
   }
 
@@ -92,7 +143,10 @@ function generateElementTypes(schema: XsdSchema, naming: NamingConvention): stri
         processedElements.add(element.name);
         const typeName = getTypeName(element.name, naming);
         const customTypeName = getTypeName(customType.name, naming);
-        types.push(`export type ${typeName} = ${customTypeName};`);
+        
+        if (typeName !== customTypeName) {
+          types.push(`export type ${typeName} = ${customTypeName};`);
+        }
       } else {
         processedElements.add(element.name);
         const typeName = getTypeName(element.name, naming);
